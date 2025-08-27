@@ -7,7 +7,7 @@
 
 <div align="center">
 
-**[➡️ Try the Live App in AI Studio](https://ai.studio/apps/drive/1ttWg0xLIy6mu6-wDgFkS-XxLWPq17tX)**
+**[➡️ Try the Live App in AI Studio](https://ai.studio/apps/drive/1ttWg0xLIy6mu6-wDgFkS-XxLWpPq17tX)**
 
 </div>
 
