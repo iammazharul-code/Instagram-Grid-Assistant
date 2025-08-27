@@ -1,0 +1,5 @@
+{
+  "name": "Instagram Grid Previewer",
+  "description": "A tool to preview how your Instagram profile grid will look. Upload photos to a 3x3 grid to check the layout, especially for split images, before posting.",
+  "requestFramePermissions": []
+}
