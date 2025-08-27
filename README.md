@@ -5,6 +5,12 @@
   </p>
 </div>
 
+<div align="center">
+
+**[➡️ Try the Live App in AI Studio](https://ai.studio/apps/drive/1ttWg0xLIy6mu6-wDgFkS-XxLWPq17tX)**
+
+</div>
+
 <!-- You can replace this with a GIF or screenshot of the app in action! -->
 <div align="center">
 <img width="1200" alt="App Preview" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
