@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HomeIcon, SearchIcon, NewPostIcon, ReelsIcon } from './Icons';
+import { SolidHomeIcon, SearchIcon, NewPostIcon, ReelsIcon } from './Icons';
 
 interface BottomNavProps {
     profilePic: string | null;
@@ -35,7 +35,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpe
         <footer className="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto bg-white border-t border-gray-200 dark:bg-black dark:border-zinc-800 text-black dark:text-white">
             <div className="flex justify-around items-center h-14">
                 <button aria-label="Home">
-                    <HomeIcon className="w-7 h-7" />
+                    <SolidHomeIcon className="w-7 h-7" />
                 </button>
                 <button aria-label="Search">
                     <SearchIcon className="w-7 h-7" />

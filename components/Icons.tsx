@@ -69,3 +69,21 @@ export const DownloadIcon: React.FC<{ className?: string }> = ({ className }) =>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
   </svg>
 );
+
+export const SolidHomeIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg aria-label="Home" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
+        <path d="M9.001 16.502v-3.001a1.5 1.5 0 1 1 3 0v3.001a.75.75 0 0 0 .75.75h2.25a2.25 2.25 0 0 0 2.25-2.25V9.333a2.251 2.251 0 0 0-1.021-1.91l-4.502-3.001a1.5 1.5 0 0 0-1.456 0l-4.502 3.001a2.251 2.251 0 0 0-1.021 1.91v5.669a2.25 2.25 0 0 0 2.25 2.25H8.25a.75.75 0 0 0 .75-.75Z"></path>
+    </svg>
+);
+
+export const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg aria-label="Videos" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
+        <path d="M21.58 7.19a2.19 2.19 0 0 0-1.54-1.54C18.6 5.2 12 5.2 12 5.2s-6.6 0-8.04.45A2.19 2.19 0 0 0 2.42 7.19c-.45 1.44-.45 4.81-.45 4.81s0 3.37.45 4.81a2.19 2.19 0 0 0 1.54 1.54c1.44.45 8.04.45 8.04.45s6.6 0 8.04-.45a2.19 2.19 0 0 0 1.54-1.54c.45-1.44.45-4.81.45-4.81s0-3.37-.45-4.81zM9.75 14.59V8.81l5.2 2.89-5.2 2.89z"></path>
+    </svg>
+);
+
+export const UserTagIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg aria-label="Tagged in" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
+        <path d="M12 12a3 3 0 100-6 3 3 0 000 6zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm9-12H3C1.9 2 1 2.9 1 4v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H3V4h18v16z"></path>
+    </svg>
+);

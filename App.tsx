@@ -47,6 +47,7 @@ const App: React.FC = () => {
   const [isSplitterOpen, setIsSplitterOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [splitHistory, setSplitHistory] = useState<SplitHistoryItem[]>([]);
+  const [draggedGridItemId, setDraggedGridItemId] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -137,15 +138,19 @@ const App: React.FC = () => {
 
     Promise.all(promises).then(images => {
         setGridItems(prevItems => {
-            const newItems = [...prevItems];
-            let imageIndex = 0;
-            for (let i = 0; i < newItems.length && imageIndex < images.length; i++) {
-                if (newItems[i].imageSrc === null) {
-                    newItems[i] = { ...newItems[i], imageSrc: images[imageIndex] };
-                    imageIndex++;
-                }
+            const newImageItems = images.map((src, index) => ({
+                id: Date.now() + index, // Temp ID
+                imageSrc: src
+            }));
+            const existingItems = prevItems.filter(item => item.imageSrc !== null);
+            let combined = [...newImageItems, ...existingItems];
+            
+            const emptyItemsToAdd = Math.max(0, MIN_GRID_ITEMS - combined.length);
+            for (let i = 0; i < emptyItemsToAdd; i++) {
+                combined.push({ id: Date.now() + combined.length, imageSrc: null });
             }
-            return newItems;
+            
+            return combined.map((item, index) => ({ ...item, id: index }));
         });
     }).catch(error => console.error("Error reading files:", error));
   }, []);
@@ -209,6 +214,28 @@ const App: React.FC = () => {
     setIsSplitterOpen(false);
   }, []);
 
+  const handleGridReorder = useCallback((targetId: number) => {
+    if (draggedGridItemId === null || draggedGridItemId === targetId) {
+        setDraggedGridItemId(null);
+        return;
+    }
+
+    setGridItems(prevItems => {
+        const draggedIndex = prevItems.findIndex(i => i.id === draggedGridItemId);
+        const targetIndex = prevItems.findIndex(i => i.id === targetId);
+
+        if (draggedIndex === -1 || targetIndex === -1) return prevItems;
+        
+        const newItems = [...prevItems];
+        const [draggedItem] = newItems.splice(draggedIndex, 1);
+        newItems.splice(targetIndex, 0, draggedItem);
+        
+        return newItems.map((item, index) => ({...item, id: index}));
+    });
+    setDraggedGridItemId(null);
+  }, [draggedGridItemId]);
+
+
   return (
     <div className="font-sans flex flex-col items-center">
       <div className="w-full max-w-md mx-auto bg-white dark:bg-black min-h-screen flex flex-col relative pb-16">
@@ -238,6 +265,8 @@ const App: React.FC = () => {
                 imageSrc={item.imageSrc}
                 onImageChange={handleImageChange}
                 onClear={handleClearItem}
+                onDragStart={setDraggedGridItemId}
+                onDrop={handleGridReorder}
               />
             ))}
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CloseIcon, DownloadIcon } from './Icons';
 
 type FitOption = 'auto' | 'fitWidth' | 'fitHeight';
@@ -18,6 +18,11 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
   const [containerWidth, setContainerWidth] = useState(0);
   const [fitOption, setFitOption] = useState<FitOption>('auto');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+  
+  const [zoom, setZoom] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, imgX: 0, imgY: 0 });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,13 +58,15 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
       reader.onload = (event) => {
         setImage(event.target?.result as string);
         setSplitImages([]);
+        setImagePosition({ x: 0, y: 0 });
+        setZoom(1);
       };
       reader.readAsDataURL(e.target.files[0]);
     }
   };
 
   const handleSplitImage = async () => {
-    if (!image) return;
+    if (!image || !containerRef.current) return;
     setIsLoading(true);
 
     const img = new Image();
@@ -105,39 +112,45 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
                 break;
         }
 
-        const tileWidth = cropWidth / COLS;
-        const tileHeight = cropHeight / rows;
+        const scale = cropWidth / containerRef.current.clientWidth;
+        const panX_source = imagePosition.x * scale;
+        const panY_source = imagePosition.y * scale;
+
+        const zoomedCropWidth = cropWidth / zoom;
+        const zoomedCropHeight = cropHeight / zoom;
+
+        const finalCropX = cropX + (cropWidth - zoomedCropWidth) / 2 - panX_source;
+        const finalCropY = cropY + (cropHeight - zoomedCropHeight) / 2 - panY_source;
+
+        const sourceTileWidth = zoomedCropWidth / COLS;
+        const sourceTileHeight = zoomedCropHeight / rows;
+
+        const outputTileWidth = cropWidth / COLS;
+        const outputTileHeight = cropHeight / rows;
 
         const croppedImages: string[] = [];
-        canvas.width = tileWidth;
-        canvas.height = tileHeight;
+        canvas.width = outputTileWidth;
+        canvas.height = outputTileHeight;
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < COLS; c++) {
                 ctx.fillStyle = backgroundColor;
-                ctx.fillRect(0, 0, tileWidth, tileHeight);
+                ctx.fillRect(0, 0, outputTileWidth, outputTileHeight);
                 ctx.drawImage(
                     img,
-                    cropX + c * tileWidth,
-                    cropY + r * tileHeight,
-                    tileWidth,
-                    tileHeight,
-                    0,
-                    0,
-                    tileWidth,
-                    tileHeight
+                    finalCropX + c * sourceTileWidth,
+                    finalCropY + r * sourceTileHeight,
+                    sourceTileWidth,
+                    sourceTileHeight,
+                    0, 0, outputTileWidth, outputTileHeight
                 );
                 croppedImages.push(canvas.toDataURL('image/png'));
             }
         }
-
         setSplitImages(croppedImages);
         setIsLoading(false);
     };
-    img.onerror = () => {
-      setIsLoading(false);
-      console.error("Image failed to load.");
-    }
+    img.onerror = () => { setIsLoading(false); }
   };
     
   const handleDownloadAll = () => {
@@ -150,24 +163,56 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
       document.body.removeChild(link);
     });
   };
-  
+
   const handleConfirmAndClose = () => {
     if (image && splitImages.length > 0) {
-        onConfirm({ originalSrc: image, splitImages });
+      onConfirm({
+        originalSrc: image,
+        splitImages: splitImages,
+      });
     }
-  }
+  };
 
   const handleResetSplit = () => setSplitImages([]);
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: e.clientX, y: e.clientY,
+      imgX: imagePosition.x, imgY: imagePosition.y
+    };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setImagePosition({
+      x: dragStartRef.current.imgX + dx,
+      y: dragStartRef.current.imgY + dy,
+    });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setImagePosition({ x: 0, y: 0 });
+    setZoom(1);
+  };
+  
   const getBackgroundImageStyle = (): React.CSSProperties => ({
       position: 'absolute',
       top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)',
-      transition: 'all 0.3s ease',
+      transform: `translate(-50%, -50%) translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoom})`,
+      transition: isDragging ? 'none' : 'transform 0.2s ease, width 0.2s ease, height 0.2s ease',
       zIndex: 1,
+      cursor: isDragging ? 'grabbing' : 'grab',
       width: fitOption === 'fitHeight' ? 'auto' : '100%',
       height: fitOption === 'fitWidth' ? 'auto' : '100%',
-      objectFit: fitOption === 'auto' ? 'cover' : 'contain',
+      objectFit: fitOption === 'auto' ? 'cover' : undefined,
+      pointerEvents: 'none',
   });
 
   const gridAspectRatio = (rows * 5) / (COLS * 4);
@@ -239,20 +284,37 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
                       <label className="font-medium">Background:</label>
                       <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="w-10 h-10 border-none rounded-md cursor-pointer bg-transparent"/>
                     </div>
+                     <div className="flex items-center gap-2">
+                      <label className="font-medium">Zoom:</label>
+                      <input 
+                        type="range" min="1" max="5" step="0.01" 
+                        value={zoom} 
+                        onChange={e => setZoom(parseFloat(e.target.value))}
+                        className="w-32 cursor-pointer"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
               <div ref={containerRef} className="w-full">
                 {image ? (
-                  <div style={{height: `${gridHeight}px`}} className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700 transition-all duration-300" >
+                  <div 
+                    style={{height: `${gridHeight}px`}} 
+                    className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700 transition-all duration-300 cursor-grab"
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onContextMenu={handleContextMenu}
+                  >
                     {isLoading && <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white z-10">Processing...</div>}
                     
                     {splitImages.length === 0 && (
                       <img src={image} alt="Preview" style={getBackgroundImageStyle()} />
                     )}
                     
-                    <div className="grid grid-cols-3 w-full h-full" style={{gap: '4px', backgroundColor: splitImages.length > 0 ? 'transparent': backgroundColor}}>
+                    <div className="grid grid-cols-3 w-full h-full pointer-events-none" style={{gap: '4px', backgroundColor: splitImages.length > 0 ? 'transparent': backgroundColor}}>
                       {Array.from({ length: rows * COLS }).map((_, index) => (
                         <div key={index} className={`aspect-[4/5] relative ${splitImages.length === 0 ? 'border border-dashed border-white border-opacity-20' : ''}`}>
                           {splitImages[index] && (

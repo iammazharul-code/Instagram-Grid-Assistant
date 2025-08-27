@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { CloseIcon } from './Icons';
 
 interface GridItemProps {
@@ -6,10 +6,13 @@ interface GridItemProps {
   imageSrc: string | null;
   onImageChange: (id: number, src: string) => void;
   onClear: (id: number) => void;
+  onDragStart: (id: number) => void;
+  onDrop: (id: number) => void;
 }
 
-const GridItem: React.FC<GridItemProps> = ({ id, imageSrc, onImageChange, onClear }) => {
+const GridItem: React.FC<GridItemProps> = ({ id, imageSrc, onImageChange, onClear, onDragStart, onDrop }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,8 +32,35 @@ const GridItem: React.FC<GridItemProps> = ({ id, imageSrc, onImageChange, onClea
     inputRef.current?.click();
   }, []);
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }
+
+  const handleDragEnter = () => {
+    if (imageSrc) {
+      setIsDragOver(true);
+    }
+  }
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  }
+
+  const handleDrop = () => {
+    setIsDragOver(false);
+    onDrop(id);
+  }
+
   return (
-    <div className="aspect-[4/5] relative group bg-gray-200 dark:bg-zinc-800">
+    <div 
+        className="aspect-[4/5] relative group bg-gray-200 dark:bg-zinc-800"
+        draggable={imageSrc !== null}
+        onDragStart={() => onDragStart(id)}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+    >
       <input
         type="file"
         ref={inputRef}
@@ -57,6 +87,9 @@ const GridItem: React.FC<GridItemProps> = ({ id, imageSrc, onImageChange, onClea
           aria-label="Add image"
         >
         </button>
+      )}
+      {isDragOver && (
+          <div className="absolute inset-0 bg-white bg-opacity-50 ring-2 ring-white pointer-events-none"></div>
       )}
     </div>
   );
