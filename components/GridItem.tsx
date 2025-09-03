@@ -4,7 +4,7 @@ import { CloseIcon } from './Icons';
 interface GridItemProps {
   id: number;
   imageSrc: string | null;
-  onImageChange: (id: number, src: string) => void;
+  onImageChange: (id: number, file: File) => void;
   onClear: (id: number) => void;
   onDragStart: (id: number) => void;
   onDrop: (id: number) => void;
@@ -17,13 +17,7 @@ const GridItem: React.FC<GridItemProps> = ({ id, imageSrc, onImageChange, onClea
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === 'string') {
-          onImageChange(id, e.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      onImageChange(id, file);
     }
     event.target.value = '';
   }, [id, onImageChange]);

@@ -4,7 +4,7 @@ import { PlusIcon } from './Icons';
 
 interface StoryHighlightProps {
   highlight: Highlight;
-  onImageChange: (id: number, src: string) => void;
+  onImageChange: (id: number, file: File) => void;
   onLabelChange: (id: number, label: string) => void;
   onDragStart: (id: number) => void;
   onDrop: (id: number) => void;
@@ -53,13 +53,7 @@ const StoryHighlight: React.FC<StoryHighlightProps> = ({ highlight, onImageChang
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === 'string') {
-          onImageChange(highlight.id, e.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      onImageChange(highlight.id, file);
     }
     event.target.value = '';
   }, [highlight.id, onImageChange]);

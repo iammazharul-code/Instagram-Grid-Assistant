@@ -9,11 +9,11 @@ interface ProfileSectionProps {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   highlights: Highlight[];
-  onHighlightImageChange: (id: number, src: string) => void;
+  onHighlightImageChange: (id: number, file: File) => void;
   onHighlightLabelChange: (id: number, label: string) => void;
   onHighlightReorder: (draggedId: number, targetId: number) => void;
   profilePic: string | null;
-  onProfilePicChange: (src: string) => void;
+  onProfilePicChange: (file: File) => void;
   bio: Bio;
   onBioChange: (field: keyof Bio, value: string) => void;
   stats: Stats;
@@ -73,13 +73,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (typeof e.target?.result === 'string') {
-          onProfilePicChange(e.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      onProfilePicChange(file);
     }
     event.target.value = '';
   }, [onProfilePicChange]);

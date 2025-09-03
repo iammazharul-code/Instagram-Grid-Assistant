@@ -9,13 +9,37 @@ import SplitHistoryModal from './components/SplitHistoryModal';
 
 const MIN_GRID_ITEMS = 12;
 
+// Helper functions for new file workflow
+const createPublicFile = async (file: File): Promise<string> => {
+  // This simulates creating a file in the /public directory.
+  // In a real backend scenario, this would be an API call to upload the file.
+  // Here, we just return the path that the file would have.
+  return `/public/${file.name}`;
+};
+
+const dataURLtoFile = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) {
+      throw new Error('Invalid data URL');
+    }
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
 const initialGridItems: GridItemType[] = Array.from({ length: MIN_GRID_ITEMS }, (_, i) => ({
   id: i,
   imageSrc: null,
 }));
 
 const initialHighlights: Highlight[] = [
-  { id: 1, label: 'Clients', imageSrc: null },
+  { id: 1, label: 'Clients', imageSrc: '/public/output-1756390779078.png' },
   { id: 2, label: '3D', imageSrc: null },
   { id: 3, label: 'Take a break', imageSrc: null },
   { id: 4, label: 'Animation', imageSrc: null },
@@ -40,7 +64,7 @@ const App: React.FC = () => {
   const [gridItems, setGridItems] = useState<GridItemType[]>(initialGridItems);
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [profilePic, setProfilePic] = useState<string | null>('Comp 7 (0-00-03-20).jpg');
+  const [profilePic, setProfilePic] = useState<string | null>('/public/Comp 7 (0-00-03-20).jpg');
   const [bio, setBio] = useState<Bio>(initialBio);
   const [stats, setStats] = useState<Stats>(initialStats);
   
@@ -60,7 +84,8 @@ const App: React.FC = () => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   }, []);
 
-  const handleImageChange = useCallback((id: number, imageSrc: string) => {
+  const handleImageChange = useCallback(async (id: number, file: File) => {
+    const imageSrc = await createPublicFile(file);
     setGridItems((prevItems) =>
       prevItems.map((item) => (item.id === id ? { ...item, imageSrc } : item))
     );
@@ -76,7 +101,8 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const handleHighlightImageChange = useCallback((id: number, imageSrc: string) => {
+  const handleHighlightImageChange = useCallback(async (id: number, file: File) => {
+    const imageSrc = await createPublicFile(file);
     setHighlights((prev) =>
       prev.map((h) => (h.id === id ? { ...h, imageSrc } : h))
     );
@@ -105,7 +131,8 @@ const App: React.FC = () => {
     });
   }, []);
   
-  const handleProfilePicChange = useCallback((imageSrc: string) => {
+  const handleProfilePicChange = useCallback(async (file: File) => {
+    const imageSrc = await createPublicFile(file);
     setProfilePic(imageSrc);
   }, []);
   
@@ -117,28 +144,15 @@ const App: React.FC = () => {
     setStats(prevStats => ({ ...prevStats, [field]: value }));
   }, []);
   
-  const handleBatchUpload = useCallback((files: FileList) => {
+  const handleBatchUpload = useCallback(async (files: FileList) => {
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
 
-    const promises = imageFiles.map(file => {
-        return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (typeof e.target?.result === 'string') {
-                    resolve(e.target.result);
-                } else {
-                    reject(new Error('Failed to read file'));
-                }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    });
-
-    Promise.all(promises).then(images => {
+    try {
+        const publicPaths = await Promise.all(imageFiles.map(file => createPublicFile(file)));
+        
         setGridItems(prevItems => {
-            const newImageItems = images.map((src, index) => ({
+            const newImageItems = publicPaths.map((src, index) => ({
                 id: Date.now() + index, // Temp ID
                 imageSrc: src
             }));
@@ -152,66 +166,74 @@ const App: React.FC = () => {
             
             return combined.map((item, index) => ({ ...item, id: index }));
         });
-    }).catch(error => console.error("Error reading files:", error));
+    } catch (error) {
+        console.error("Error creating public files:", error);
+    }
   }, []);
   
-  const handleBatchHighlightUpload = useCallback((files: FileList) => {
+  const handleBatchHighlightUpload = useCallback(async (files: FileList) => {
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
 
-    const promises = imageFiles.map(file => {
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          if (typeof e.target?.result === 'string') {
-            resolve(e.target.result);
-          } else {
-            reject(new Error('Failed to read file'));
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(promises).then(images => {
-      setHighlights(prevItems => {
-        const newItems = [...prevItems];
-        let imageIndex = 0;
-        for (let i = 0; i < newItems.length && imageIndex < images.length; i++) {
-          if (newItems[i].imageSrc === null) {
-            newItems[i] = { ...newItems[i], imageSrc: images[imageIndex] };
-            imageIndex++;
-          }
-        }
-        return newItems;
-      });
-    }).catch(error => console.error("Error reading files:", error));
+    try {
+        const publicPaths = await Promise.all(imageFiles.map(file => createPublicFile(file)));
+        setHighlights(prevItems => {
+            const newItems = [...prevItems];
+            let imageIndex = 0;
+            for (let i = 0; i < newItems.length && imageIndex < publicPaths.length; i++) {
+            if (newItems[i].imageSrc === null) {
+                newItems[i] = { ...newItems[i], imageSrc: publicPaths[imageIndex] };
+                imageIndex++;
+            }
+            }
+            return newItems;
+        });
+    } catch (error) {
+        console.error("Error creating public files:", error);
+    }
   }, []);
   
-  const handleSplitConfirm = useCallback((data: { originalSrc: string, splitImages: string[] }) => {
-    // Add to history
-    setSplitHistory(prev => [...prev, { id: Date.now(), ...data }]);
-    
-    // Add to grid
-    setGridItems(prevItems => {
-        const newImages = data.splitImages.map((src, index) => ({
-            id: Date.now() + index, // Use a unique ID
-            imageSrc: src
-        }));
-        const existingItems = prevItems.filter(item => item.imageSrc !== null);
-        const emptyItems = prevItems.filter(item => item.imageSrc === null);
+  const handleSplitConfirm = useCallback(async (data: { originalSrc: string, splitImages: string[] }) => {
+    const timestamp = Date.now();
+    try {
+        // Create files from base64 data
+        const originalFile = dataURLtoFile(data.originalSrc, `split-original-${timestamp}.png`);
+        const splitFiles = data.splitImages.map((src, index) => 
+            dataURLtoFile(src, `split-${timestamp}-${index + 1}.png`)
+        );
         
-        let combined = [...newImages, ...existingItems, ...emptyItems];
-        // Ensure minimum grid size
-        while (combined.length < MIN_GRID_ITEMS) {
-            combined.push({ id: Date.now() + combined.length, imageSrc: null });
-        }
+        // Get public paths for all files
+        const originalPublicPath = await createPublicFile(originalFile);
+        const splitPublicPaths = await Promise.all(splitFiles.map(file => createPublicFile(file)));
 
-        return combined.map((item, index) => ({ ...item, id: index }));
-    });
+        // Add to history
+        setSplitHistory(prev => [...prev, { 
+            id: timestamp, 
+            originalSrc: originalPublicPath,
+            splitImages: splitPublicPaths 
+        }]);
+        
+        // Add to grid
+        setGridItems(prevItems => {
+            const newImages = splitPublicPaths.map((src, index) => ({
+                id: timestamp + index, // Use a unique ID
+                imageSrc: src
+            }));
+            const existingItems = prevItems.filter(item => item.imageSrc !== null);
+            const emptyItems = prevItems.filter(item => item.imageSrc === null);
+            
+            let combined = [...newImages, ...existingItems, ...emptyItems];
+            while (combined.length < MIN_GRID_ITEMS) {
+                combined.push({ id: Date.now() + combined.length, imageSrc: null });
+            }
 
-    setIsSplitterOpen(false);
+            return combined.map((item, index) => ({ ...item, id: index }));
+        });
+
+        setIsSplitterOpen(false);
+    } catch (error) {
+        console.error("Error processing split images:", error);
+    }
   }, []);
 
   const handleGridReorder = useCallback((targetId: number) => {
