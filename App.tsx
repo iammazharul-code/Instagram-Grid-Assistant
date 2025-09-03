@@ -13,8 +13,9 @@ const MIN_GRID_ITEMS = 12;
 const createPublicFile = async (file: File): Promise<string> => {
   // This simulates creating a file in the /public directory.
   // In a real backend scenario, this would be an API call to upload the file.
-  // Here, we just return the path that the file would have.
-  return `/public/${file.name}`;
+  // Here, we just return a URL that can be used to access the file.
+  // In most static setups, files in /public are served from the root.
+  return `/${file.name}`;
 };
 
 const dataURLtoFile = (dataurl: string, filename: string): File => {
@@ -39,7 +40,7 @@ const initialGridItems: GridItemType[] = Array.from({ length: MIN_GRID_ITEMS }, 
 }));
 
 const initialHighlights: Highlight[] = [
-  { id: 1, label: 'Clients', imageSrc: '/public/output-1756390779078.png' },
+  { id: 1, label: 'Clients', imageSrc: '/output-1756390779078.png' },
   { id: 2, label: '3D', imageSrc: null },
   { id: 3, label: 'Take a break', imageSrc: null },
   { id: 4, label: 'Animation', imageSrc: null },
@@ -64,7 +65,7 @@ const App: React.FC = () => {
   const [gridItems, setGridItems] = useState<GridItemType[]>(initialGridItems);
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [profilePic, setProfilePic] = useState<string | null>('/public/Comp 7 (0-00-03-20).jpg');
+  const [profilePic, setProfilePic] = useState<string | null>('/Comp 7 (0-00-03-20).jpg');
   const [bio, setBio] = useState<Bio>(initialBio);
   const [stats, setStats] = useState<Stats>(initialStats);
   
