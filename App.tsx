@@ -40,7 +40,7 @@ const App: React.FC = () => {
   const [gridItems, setGridItems] = useState<GridItemType[]>(initialGridItems);
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [profilePic, setProfilePic] = useState<string | null>('Comp 7 (0-00-03-20).jpg');
   const [bio, setBio] = useState<Bio>(initialBio);
   const [stats, setStats] = useState<Stats>(initialStats);
   
