@@ -40,7 +40,7 @@ const initialGridItems: GridItemType[] = Array.from({ length: MIN_GRID_ITEMS }, 
 }));
 
 const initialHighlights: Highlight[] = [
-  { id: 1, label: 'Clients', imageSrc: '/output-1756390779078.png' },
+  { id: 1, label: 'Clients', imageSrc: null },
   { id: 2, label: '3D', imageSrc: null },
   { id: 3, label: 'Take a break', imageSrc: null },
   { id: 4, label: 'Animation', imageSrc: null },
