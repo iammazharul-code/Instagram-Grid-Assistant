@@ -1,3 +1,4 @@
+
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { MenuIcon, DownChevronIcon, AddStoryIcon, SunIcon, MoonIcon, CreateIcon } from './Icons';
 import type { Highlight, Bio, Stats } from '../types';
@@ -119,7 +120,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
           />
           <div className="relative" ref={menuRef}>
             <button onClick={() => setIsUploadMenuOpen(prev => !prev)} aria-label="Create menu">
-                <CreateIcon className="w-7 h-7" />
+                <CreateIcon className="w-7 h-7 text-blue-600" />
             </button>
             {isUploadMenuOpen && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-zinc-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-10">

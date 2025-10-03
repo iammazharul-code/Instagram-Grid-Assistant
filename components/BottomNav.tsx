@@ -6,10 +6,13 @@ interface BottomNavProps {
     profilePic: string | null;
     onOpenSplitter: () => void;
     onOpenHistory: () => void;
-    onToggleOnboarding: () => void;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpenHistory, onToggleOnboarding }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ 
+    profilePic, 
+    onOpenSplitter, 
+    onOpenHistory, 
+}) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +42,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpe
                 <button aria-label="Home">
                     <SolidHomeIcon className="w-7 h-7" />
                 </button>
-                <button aria-label="Search and toggle help" onClick={onToggleOnboarding}>
+                <button aria-label="Search">
                     <SearchIcon className="w-7 h-7" />
                 </button>
                 <div className="relative" ref={menuRef}>
@@ -56,7 +59,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpe
                         </div>
                     )}
                     <button aria-label="New post options" onClick={() => setIsMenuOpen(prev => !prev)}>
-                        <NewPostIcon className="w-7 h-7" />
+                        <NewPostIcon className="w-7 h-7 text-blue-600" />
                     </button>
                 </div>
                 <button aria-label="Reels">
