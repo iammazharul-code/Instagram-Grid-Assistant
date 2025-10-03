@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import type { GridItemType, Highlight, Bio, Stats, SplitHistoryItem } from './types';
 import GridItem from './components/GridItem';
@@ -9,30 +10,22 @@ import SplitHistoryModal from './components/SplitHistoryModal';
 
 const MIN_GRID_ITEMS = 12;
 
-// Helper functions for new file workflow
-const createPublicFile = async (file: File): Promise<string> => {
-  // This simulates creating a file in the /public directory.
-  // In a real backend scenario, this would be an API call to upload the file.
-  // Here, we just return a URL that can be used to access the file.
-  // In most static setups, files in /public are served from the root.
-  return `/${file.name}`;
+// Helper function to convert a File object to a base64 data URL.
+const createPublicFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('FileReader result is not a string.'));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };
 
-const dataURLtoFile = (dataurl: string, filename: string): File => {
-    const arr = dataurl.split(',');
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) {
-      throw new Error('Invalid data URL');
-    }
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  };
 
 const initialGridItems: GridItemType[] = Array.from({ length: MIN_GRID_ITEMS }, (_, i) => ({
   id: i,
@@ -65,7 +58,7 @@ const App: React.FC = () => {
   const [gridItems, setGridItems] = useState<GridItemType[]>(initialGridItems);
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [profilePic, setProfilePic] = useState<string | null>('/Comp 7 (0-00-03-20).jpg');
+  const [profilePic, setProfilePic] = useState<string | null>('https://iammazharul-code.github.io/portfolio-assets/Test/dp-A-small.jpg');
   const [bio, setBio] = useState<Bio>(initialBio);
   const [stats, setStats] = useState<Stats>(initialStats);
   
@@ -196,45 +189,32 @@ const App: React.FC = () => {
   
   const handleSplitConfirm = useCallback(async (data: { originalSrc: string, splitImages: string[] }) => {
     const timestamp = Date.now();
-    try {
-        // Create files from base64 data
-        const originalFile = dataURLtoFile(data.originalSrc, `split-original-${timestamp}.png`);
-        const splitFiles = data.splitImages.map((src, index) => 
-            dataURLtoFile(src, `split-${timestamp}-${index + 1}.png`)
-        );
+    
+    // Add to history using the direct data URLs
+    setSplitHistory(prev => [...prev, { 
+        id: timestamp, 
+        originalSrc: data.originalSrc,
+        splitImages: data.splitImages 
+    }]);
+    
+    // Add to grid using the direct data URLs
+    setGridItems(prevItems => {
+        const newImages = data.splitImages.map((src, index) => ({
+            id: timestamp + index, // Use a unique ID
+            imageSrc: src
+        }));
+        const existingItems = prevItems.filter(item => item.imageSrc !== null);
+        const emptyItems = prevItems.filter(item => item.imageSrc === null);
         
-        // Get public paths for all files
-        const originalPublicPath = await createPublicFile(originalFile);
-        const splitPublicPaths = await Promise.all(splitFiles.map(file => createPublicFile(file)));
+        let combined = [...newImages, ...existingItems, ...emptyItems];
+        while (combined.length < MIN_GRID_ITEMS) {
+            combined.push({ id: Date.now() + combined.length, imageSrc: null });
+        }
 
-        // Add to history
-        setSplitHistory(prev => [...prev, { 
-            id: timestamp, 
-            originalSrc: originalPublicPath,
-            splitImages: splitPublicPaths 
-        }]);
-        
-        // Add to grid
-        setGridItems(prevItems => {
-            const newImages = splitPublicPaths.map((src, index) => ({
-                id: timestamp + index, // Use a unique ID
-                imageSrc: src
-            }));
-            const existingItems = prevItems.filter(item => item.imageSrc !== null);
-            const emptyItems = prevItems.filter(item => item.imageSrc === null);
-            
-            let combined = [...newImages, ...existingItems, ...emptyItems];
-            while (combined.length < MIN_GRID_ITEMS) {
-                combined.push({ id: Date.now() + combined.length, imageSrc: null });
-            }
+        return combined.map((item, index) => ({ ...item, id: index }));
+    });
 
-            return combined.map((item, index) => ({ ...item, id: index }));
-        });
-
-        setIsSplitterOpen(false);
-    } catch (error) {
-        console.error("Error processing split images:", error);
-    }
+    setIsSplitterOpen(false);
   }, []);
 
   const handleGridReorder = useCallback((targetId: number) => {

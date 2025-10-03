@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { CloseIcon, DownloadIcon } from './Icons';
 
 type FitOption = 'auto' | 'fitWidth' | 'fitHeight';
@@ -10,12 +10,50 @@ interface ImageSplitterProps {
 
 const COLS = 3;
 
+const calculateImageSize = (
+  containerRect: { width: number, height: number }, 
+  imageDimensions: { width: number, height: number }, 
+  fitOption: FitOption
+): { width: number, height: number } => {
+  if (!containerRect.width || !containerRect.height || !imageDimensions.width || !imageDimensions.height) {
+      return { width: 0, height: 0 };
+  }
+  const containerAspect = containerRect.width / containerRect.height;
+  const imageAspect = imageDimensions.width / imageDimensions.height;
+
+  let baseWidth: number, baseHeight: number;
+
+  switch (fitOption) {
+      case 'fitWidth':
+          baseWidth = containerRect.width;
+          baseHeight = baseWidth / imageAspect;
+          break;
+      case 'fitHeight':
+          baseHeight = containerRect.height;
+          baseWidth = baseHeight * imageAspect;
+          break;
+      case 'auto':
+      default:
+          if (imageAspect >= containerAspect) { // Wider or same aspect
+              baseHeight = containerRect.height;
+              baseWidth = baseHeight * imageAspect;
+          } else { // Taller
+              baseWidth = containerRect.width;
+              baseHeight = baseWidth / imageAspect;
+          }
+          break;
+  }
+  return { width: baseWidth, height: baseHeight };
+};
+
+
 export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm }) => {
   const [rows, setRows] = useState(1);
   const [image, setImage] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [splitImages, setSplitImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [fitOption, setFitOption] = useState<FitOption>('auto');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   
@@ -28,16 +66,19 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const updateWidth = () => {
+    const updateSize = () => {
       if (containerRef.current) {
-        setContainerWidth(containerRef.current.getBoundingClientRect().width);
+        const rect = containerRef.current.getBoundingClientRect();
+        const gridAspectRatio = (rows * 5) / (COLS * 4);
+        setContainerSize({ width: rect.width, height: rect.width * gridAspectRatio });
       }
     };
-    updateWidth();
+    
+    updateSize();
     
     const resizeObserver = new ResizeObserver(entries => {
       if (entries[0]) {
-        setContainerWidth(entries[0].contentRect.width);
+        updateSize();
       }
     });
 
@@ -50,13 +91,21 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
         resizeObserver.unobserve(containerRef.current);
       }
     };
-  }, []);
+  }, [rows]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setImage(event.target?.result as string);
+        const dataUrl = event.target?.result as string;
+        setImage(dataUrl);
+
+        const img = new Image();
+        img.onload = () => {
+          setImageDimensions({ width: img.width, height: img.height });
+        };
+        img.src = dataUrl;
+        
         setSplitImages([]);
         setImagePosition({ x: 0, y: 0 });
         setZoom(1);
@@ -112,7 +161,8 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
                 break;
         }
 
-        const scale = cropWidth / containerRef.current.clientWidth;
+        const { width: displayedWidth } = calculateImageSize(containerSize, imageDimensions, fitOption);
+        const scale = cropWidth / displayedWidth;
         const panX_source = imagePosition.x * scale;
         const panY_source = imagePosition.y * scale;
 
@@ -186,12 +236,25 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging) return;
+    
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
-    setImagePosition({
-      x: dragStartRef.current.imgX + dx,
-      y: dragStartRef.current.imgY + dy,
-    });
+    
+    let nextX = dragStartRef.current.imgX + dx;
+    let nextY = dragStartRef.current.imgY + dy;
+
+    // Constrain panning
+    const { width: baseWidth, height: baseHeight } = calculateImageSize(containerSize, imageDimensions, fitOption);
+    const scaledWidth = baseWidth * zoom;
+    const scaledHeight = baseHeight * zoom;
+
+    const horizontalFreedom = Math.max(0, scaledWidth - containerSize.width) / 2;
+    const verticalFreedom = Math.max(0, scaledHeight - containerSize.height) / 2;
+    
+    nextX = Math.max(-horizontalFreedom, Math.min(horizontalFreedom, nextX));
+    nextY = Math.max(-verticalFreedom, Math.min(verticalFreedom, nextY));
+
+    setImagePosition({ x: nextX, y: nextY });
   };
 
   const handleMouseUp = () => setIsDragging(false);
@@ -202,21 +265,25 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
     setZoom(1);
   };
   
-  const getBackgroundImageStyle = (): React.CSSProperties => ({
-      position: 'absolute',
-      top: '50%', left: '50%',
-      transform: `translate(-50%, -50%) translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoom})`,
-      transition: isDragging ? 'none' : 'transform 0.2s ease, width 0.2s ease, height 0.2s ease',
-      zIndex: 1,
-      cursor: isDragging ? 'grabbing' : 'grab',
-      width: fitOption === 'fitHeight' ? 'auto' : '100%',
-      height: fitOption === 'fitWidth' ? 'auto' : '100%',
-      objectFit: fitOption === 'auto' ? 'cover' : undefined,
-      pointerEvents: 'none',
-  });
+  const getDraggableImageStyle = useCallback((): React.CSSProperties => {
+    if (!containerSize.width || !imageDimensions.width) {
+      return { display: 'none' };
+    }
+    
+    const { width: baseWidth, height: baseHeight } = calculateImageSize(containerSize, imageDimensions, fitOption);
 
-  const gridAspectRatio = (rows * 5) / (COLS * 4);
-  const gridHeight = containerWidth * gridAspectRatio;
+    return {
+        position: 'absolute',
+        top: '50%', left: '50%',
+        width: `${baseWidth}px`,
+        height: `${baseHeight}px`,
+        transform: `translate(-50%, -50%) translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoom})`,
+        transition: isDragging ? 'none' : 'transform 0.2s ease',
+        zIndex: 1,
+        pointerEvents: 'none',
+    };
+  }, [containerSize, imageDimensions, fitOption, imagePosition, zoom, isDragging]);
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 font-sans">
@@ -300,7 +367,7 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
               <div ref={containerRef} className="w-full">
                 {image ? (
                   <div 
-                    style={{height: `${gridHeight}px`}} 
+                    style={{height: `${containerSize.height}px`}} 
                     className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700 transition-all duration-300 cursor-grab"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
@@ -311,7 +378,7 @@ export const ImageSplitter: React.FC<ImageSplitterProps> = ({ onClose, onConfirm
                     {isLoading && <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center text-white z-10">Processing...</div>}
                     
                     {splitImages.length === 0 && (
-                      <img src={image} alt="Preview" style={getBackgroundImageStyle()} />
+                      <img src={image} alt="Preview" style={getDraggableImageStyle()} draggable="false" onDragStart={(e) => e.preventDefault()}/>
                     )}
                     
                     <div className="grid grid-cols-3 w-full h-full pointer-events-none" style={{gap: '4px', backgroundColor: splitImages.length > 0 ? 'transparent': backgroundColor}}>
