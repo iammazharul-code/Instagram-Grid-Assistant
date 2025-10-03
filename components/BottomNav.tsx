@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { SolidHomeIcon, SearchIcon, NewPostIcon, ReelsIcon } from './Icons';
 
@@ -5,9 +6,10 @@ interface BottomNavProps {
     profilePic: string | null;
     onOpenSplitter: () => void;
     onOpenHistory: () => void;
+    onToggleOnboarding: () => void;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpenHistory }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpenHistory, onToggleOnboarding }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ profilePic, onOpenSplitter, onOpe
                 <button aria-label="Home">
                     <SolidHomeIcon className="w-7 h-7" />
                 </button>
-                <button aria-label="Search">
+                <button aria-label="Search and toggle help" onClick={onToggleOnboarding}>
                     <SearchIcon className="w-7 h-7" />
                 </button>
                 <div className="relative" ref={menuRef}>

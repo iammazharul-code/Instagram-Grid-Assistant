@@ -7,8 +7,11 @@ import PostTabs from './components/PostTabs';
 import BottomNav from './components/BottomNav';
 import ImageSplitter from './components/ImageSplitter';
 import SplitHistoryModal from './components/SplitHistoryModal';
+import OnboardingTooltip from './components/OnboardingTooltip';
 
 const MIN_GRID_ITEMS = 12;
+const ONBOARDING_KEY = 'instagram-grid-previewer-visited';
+
 
 // Helper function to convert a File object to a base64 data URL.
 const createPublicFile = (file: File): Promise<string> => {
@@ -66,6 +69,7 @@ const App: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [splitHistory, setSplitHistory] = useState<SplitHistoryItem[]>([]);
   const [draggedGridItemId, setDraggedGridItemId] = useState<number | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
 
   useEffect(() => {
@@ -73,6 +77,34 @@ const App: React.FC = () => {
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
   }, [theme]);
+
+  useEffect(() => {
+    try {
+      const hasVisited = localStorage.getItem(ONBOARDING_KEY);
+      if (!hasVisited) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error("Could not access localStorage:", error);
+      setShowOnboarding(false);
+    }
+  }, []);
+
+  const handleDismissOnboarding = useCallback(() => {
+    try {
+      const hasVisited = localStorage.getItem(ONBOARDING_KEY);
+      if (!hasVisited) {
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+      }
+    } catch (error) {
+      console.error("Could not write to localStorage:", error);
+    }
+    setShowOnboarding(false);
+  }, []);
+
+  const toggleOnboarding = useCallback(() => {
+    setShowOnboarding(prev => !prev);
+  }, []);
 
   const toggleTheme = useCallback(() => {
     setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -242,6 +274,7 @@ const App: React.FC = () => {
   return (
     <div className="font-sans flex flex-col items-center">
       <div className="w-full max-w-md mx-auto bg-white dark:bg-black min-h-screen flex flex-col relative pb-16">
+        {showOnboarding && <OnboardingTooltip onDismiss={handleDismissOnboarding} />}
         <ProfileSection
           theme={theme}
           toggleTheme={toggleTheme}
@@ -278,6 +311,7 @@ const App: React.FC = () => {
             profilePic={profilePic}
             onOpenSplitter={() => setIsSplitterOpen(true)}
             onOpenHistory={() => setIsHistoryOpen(true)}
+            onToggleOnboarding={toggleOnboarding}
         />
 
         {isSplitterOpen && (
